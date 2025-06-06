@@ -11,7 +11,7 @@ from recursos.crud_productos import create_product, update_product, get_all_prod
 from recursos.crud_categorias import create_category, update_category, get_all_categories, get_category, delete_category
 from recursos.crud_usuarios import create_user, update_user, get_all_users, get_user
 
-# Importa las funciones de autenticación
+# Imports authentication functions
 from recursos.auth import (
     authenticate_user,
     create_access_token,
@@ -130,7 +130,7 @@ async def update_user_endpoint(user_id: int, full_name: str = Body(...), email: 
         raise HTTPException(status_code=404, detail="User not found")
     return updated_user
 
-# Endpoint de Inicio de Sesión (generará el JWT)
+# Login Endpoint (will generate the JWT)
 @app.post("/token", response_model=Token)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), # Espera username y password en formato x-www-form-urlencoded
@@ -149,7 +149,7 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-# Ruta protegida (solo accesible con un token JWT válido)
+# Protected route (only accessible with a valid JWT token)
 @app.get("/users/me")
 async def read_users_me(current_user: Users = Depends(get_current_user)):
     return {"username": current_user.username, "email": current_user.email, "full_name": current_user.full_name}

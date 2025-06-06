@@ -13,22 +13,20 @@ from models import Users
 from recursos.schemas import TokenData
 from recursos.password_hash import get_password_hash, verify_password
 
-
-# --- Configuración de Seguridad ---
-# Puedes generarla con: openssl rand -hex 32
+# --- Security Settings ---
 SECRET_KEY = "warrwaar"
-ALGORITHM = "HS256" # Algoritmo de hashing para JWT
+ALGORITHM = "HS256" # Hashing algorithm for JWT
 
-# Tiempo de expiración del token de acceso en minutos
+# Access token expiration time in minutes
 ACCESS_TOKEN_EXPIRE_MINUTES = 3600
 
-# Esquema de seguridad OAuth2 para el flujo de contraseña
-# El tokenUrl apunta a la ruta donde el cliente obtendrá el token
+# OAuth2 security scheme for the password flow
+# The tokenUrl points to the path where the client will obtain the token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# --- Funciones para JWT ---
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Crea un nuevo token de acceso JWT."""
+# --- Functions for JWT ---
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None): 
+    "Create a new JWT access token."
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -47,28 +45,28 @@ def get_db():
     finally:
         db.close()
 
-# --- Función para Autenticar Usuario (basada en tu crud_usuarios) ---
+# --- Function to Authenticate User (based on your crud_users) ---
 def get_user_by_username(db: Session, username: str):
-    """Busca un usuario por su nombre de usuario."""
+    """Search for a user by their username."""
     return db.query(Users).filter(Users.username == username).first()
 
 def authenticate_user(db: Session, username: str, password: str):
-    """Autentica un usuario con su nombre de usuario y contraseña."""
+    """Authenticates a user with their username and password."""
     user = get_user_by_username(db, username)
     if not user:
         return False # Usuario no encontrado
     if not verify_password(password, user.password_hash):
         return False # Contraseña incorrecta
-    # Puedes añadir aquí una verificación para active si lo tienes
-    # if not user.active:
-    #     return False
+    # Check if the user is active
+    if not user.active:
+        return False
     return user
 
-# --- Dependencia para Obtener el Usuario Actual (Protección de Rutas) ---
+# --- Dependency to Get Current User (Route Protection) ---
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """
-    Decodifica el token JWT y obtiene el usuario autenticado.
-    Esta dependencia se usa para proteger rutas.
+    Decodes the JWT token and obtains the authenticated user.
+    This dependency is used to protect routes.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -77,14 +75,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub") # 'sub' es el sujeto (subject) del token
+        username: str = payload.get("sub") # 'sub' is the subject of the token
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
 
-    user = get_user_by_username(db, token_data.username) # Obtener el usuario de la DB
+    user = get_user_by_username(db, token_data.username) # Get the DB user
     if user is None:
         raise credentials_exception
     return user

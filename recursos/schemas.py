@@ -8,22 +8,22 @@ class CategoryUpdate(BaseModel):
     name: str
 
 
-# Para la respuesta del token
+# For the token response
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-# Para los datos dentro del token (payload)
+# For data within the token (payload)
 class TokenData(BaseModel):
     username: Optional[str] = None
 
 
-# Para las credenciales de inicio de sesión
+# For login credentials
 class UserLogin(BaseModel):
     username: str
     password: str
 
-# Modelo base para el usuario
+# Base model for the user
 class UserInDB(BaseModel):
     username: str
     email: EmailStr
