@@ -50,18 +50,56 @@ def create_user(db: Session, full_name: str, email: str, username: str, password
 
 def update_user(db: Session, user_id: int, full_name: str = None, email: str = None, username: str = None, password: str = None, active: int = None):
     db_user = db.query(Users).filter(Users.id == user_id).first()
-    if db_user:
-        if full_name is not None:
-            db_user.full_name = full_name
-        if email is not None:
-            db_user.email = email
-        if username is not None:
-            db_user.username = username
-        if password is not None:
-            db_user.password_hash = password
-        if active is not None:
-            db_user.active = active
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    if email is not None:
+        if not email.strip():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El email no puede estar vacío.")
+        if len(email) > 55:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El email no debe exceder los 55 caracteres.")
+        try:
+            # Validate and normalize the email
+            validated_email_address = validate_email(email, check_deliverability=False).email
+        except EmailNotValidError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"El formato del correo electrónico '{email}' no es válido: {e}")
+
+        # validate that the email is not duplicated
+        if validated_email_address != db_user.email:
+            db_user_email_check = get_user_by_email(db, validated_email_address)
+            if db_user_email_check:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El nuevo correo electrónico ya está registrado por otro usuario.")  
+        db_user.email = validated_email_address
+
+    # Validation and update of Username
+    if username is not None:
+        if not username.strip():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El nombre de usuario no puede estar vacío.")
+        if len(username) < 3 or len(username) > 55:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El nombre de usuario debe tener entre 3 y 55 caracteres.")
+        # Check if the user is duplicated
+        if username != db_user.username:
+            db_user_username_check = get_user_by_username(db, username)
+            if db_user_username_check:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El nuevo nombre de usuario ya está en uso por otro usuario.") 
+        db_user.username = username
+
+    # Validation and update of Full Name
+    if full_name is not None:
+        if full_name and len(full_name) > 55:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El nombre completo no debe exceder los 55 caracteres.")
+        db_user.full_name = full_name
+
+    # Validation and update of Password
+    if password is not None:
+        if not password.strip():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La contraseña no puede estar vacía.")
+        db_user.password_hash = get_password_hash(password) # Hashear the new password
+
+    # Validation and update of Active status
+    if active is not None:
+        if active not in [0, 1]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El estado 'activo' debe ser 0 o 1.")
+        db_user.active = active
     db.commit()
     db.refresh(db_user)
     return db_user
-        
