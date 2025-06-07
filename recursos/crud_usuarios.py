@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from models import Users
 from fastapi import HTTPException, status
+from email_validator import validate_email, EmailNotValidError
 from recursos.password_hash import get_password_hash
 
 def get_all_users(db: Session):
@@ -22,6 +23,20 @@ def create_user(db: Session, full_name: str, email: str, username: str, password
     db_user_username = get_user_by_username(db, username)
     if db_user_username:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El nombre de usuario ya está en uso.")
+    if not email or len(email) > 55:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El email es requerido y no debe exceder los 55 caracteres.")
+    if not username or len(username) < 3 or len(username) > 55:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El nombre de usuario es requerido y debe tener entre 3 y 55 caracteres.")
+    if full_name and len(full_name) > 55:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El nombre completo no debe exceder los 55 caracteres.")
+    if not password:
+         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La contraseña no puede estar vacía.")
+    try:
+        # validate_email returns an object, .email gives us the normalized address
+        # check_deliverability=False to avoid making DNS queries
+        validated_email_address = validate_email(email, check_deliverability=False).email
+    except EmailNotValidError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"El formato del correo electrónico '{email}' no es válido: {e}")
 
     # Hash the password before storing it
     hashed_password = get_password_hash(password)
