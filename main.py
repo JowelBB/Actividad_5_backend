@@ -133,7 +133,7 @@ async def update_user_endpoint(user_id: int, full_name: str = Body(...), email: 
 # Login Endpoint (will generate the JWT)
 @app.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), # Espera username y password en formato x-www-form-urlencoded
+    form_data: OAuth2PasswordRequestForm = Depends(), # Wait for username and password in x-www-form-urlencoded format
     db: Session = Depends(get_db)
 ):
     user = authenticate_user(db, form_data.username, form_data.password)
